@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-go-service
+spec:
+  type: NodePort
+  selector:
+    app: hello-go
+  ports:
+    - protocol: TCP
+      port: 8082        # Port the service listens on inside the cluster
+      targetPort: 8080  # Port your Go app listens on
+      nodePort: 30082   # Port the "Node" (Kind container) listens on

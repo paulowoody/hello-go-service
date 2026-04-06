@@ -1,0 +1,15 @@
+# Stage 1: Build the binary
+FROM golang:1.26.1-alpine AS builder
+WORKDIR /app
+# Copy the repository contents into the build image.
+# The build context should be the repository root.
+COPY . .
+
+RUN go build -o hello-service ./cmd/hello.go
+
+# Stage 2: Create the lightweight final image
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/hello-service .
+EXPOSE 8080
+CMD ["./hello-service"]
