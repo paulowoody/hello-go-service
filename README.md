@@ -43,10 +43,12 @@ Before you start, make sure the required tools are installed:
 * kind
 * kubectl
 
-If you're using Kind with Podman, you may also need Docker/Podman compatibility settings:
+(Optional) If you're using Kind with Podman, you may also want to Docker/Podman compatibility settings:
 
 * `sudo apt update && sudo apt install podman-docker`
 * `export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"`
+* `sudo apt install podman-docker`
+* `sudo ln -s /run/podman/podman.sock /var/run/docker.sock`
 
 
 ## Workflow
@@ -71,9 +73,13 @@ Create the cluster:
 
 * `KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name go-learning --config deploy/kind-config.yaml`
 
-Load the image into the cluster so Kubernetes can use it:
+If using Podman Desktop, load the image into the cluster so Kubernetes can use it:
 
 * `kind load docker-image localhost/hello-go-service:latest --name go-learning`
+
+Otherwise, the Podman-native way is:
+* `podman save --format docker-archive -o hello.tar localhost/hello-go-service:latest`
+* `kind load image-archive hello.tar --name go-learning`
 
 Deploy the application and service:
 
