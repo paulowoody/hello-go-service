@@ -1,9 +1,0 @@
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-  - role: control-plane
-    extraPortMappings:
-      - containerPort: 30082 # This MUST match the 'nodePort' in your Service YAML
-        hostPort: 8082      # This is the port you will use on your laptop
-        listenAddress: 0.0.0.0
-        protocol: tcp

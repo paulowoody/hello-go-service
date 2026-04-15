@@ -3,11 +3,10 @@ kind: Service
 metadata:
   name: hello-go-service
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: hello-go
   ports:
     - protocol: TCP
-      port: 8082        # Port the service listens on inside the cluster
+      port: 8082        # Port accessible on your LAN
       targetPort: 8080  # Port your Go app listens on
-      nodePort: 30082   # Port the "Node" (Kind container) listens on

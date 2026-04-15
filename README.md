@@ -1,6 +1,6 @@
 # Hello Go Service Deployment Guide
 
-This repository contains a small Go HTTP service that can be run locally with Podman or deployed to a local Kubernetes cluster with Kind.
+This repository contains a small Go HTTP service that can be run locally with Podman or deployed to a local Kubernetes cluster with K3s.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ The project has three main parts:
    The Go application is packaged into a container image so it can run consistently in different environments.
 
 3. **Kubernetes deployment**  
-   The app can be deployed to a local Kind cluster using a Deployment and a NodePort Service, with health probes configured for Kubernetes.
+   The app can be deployed to a local K3s cluster using a Deployment and a NodePort Service, with health probes configured for Kubernetes.
 
 ## Repository structure
 
@@ -25,7 +25,7 @@ The repository is organized to separate application code, deployment manifests, 
 
 * `cmd/` — application entry points
 * `internal/` — internal application packages
-* `deploy/` — Kubernetes manifests and Kind configuration
+* `deploy/` — Kubernetes manifests and K3s configuration
 * `build/` — container build files
 * `go.mod` — Go module definition
 
@@ -40,10 +40,10 @@ The container build expects the repository root to be the build context. That wa
 Before you start, make sure the required tools are installed:
 
 * podman
-* kind
+* k3s
 * kubectl
 
-(Optional) If you're using Kind with Podman, you may also want to Docker/Podman compatibility settings:
+(Optional) If you're using K3s with Podman, you may also want to Docker/Podman compatibility settings:
 
 * `sudo apt update && sudo apt install podman-docker`
 * `export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"`
@@ -65,21 +65,22 @@ This is the quickest way to test the service without Kubernetes. It maps port `8
 
 * `podman run -d -p 8082:8080 hello-go-service`
 
-### 3. Deploy to Kubernetes with Kind
+### 3. Deploy to Kubernetes with K3s
 
-Use this option if you want to test the app in a Kubernetes environment. Kind runs a local cluster inside containers.
+Use this option if you want to test the app in a Kubernetes environment. K3s is a lightweight Kubernetes distribution.
 
-Create the cluster:
+Ensure K3s is running. You can start it with:
 
-* `KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name go-learning --config deploy/kind-config.yaml`
+* `curl -sfL https://get.k3s.io | sh -`
 
-If using Podman Desktop, load the image into the cluster so Kubernetes can use it:
+Import the image into K3s so Kubernetes can use it:
 
-* `kind load docker-image localhost/hello-go-service:latest --name go-learning`
+* `podman save localhost/hello-go-service:latest | sudo k3s ctr images import -`
 
-Otherwise, the Podman-native way is:
+Alternatively, the Podman-native way is:
 * `podman save --format docker-archive -o hello.tar localhost/hello-go-service:latest`
-* `kind load image-archive hello.tar --name go-learning`
+* `sudo k3s ctr images import hello.tar`
+* `rm hello.tar`
 
 Deploy the application and service:
 
@@ -95,24 +96,16 @@ The `rollout status` command is useful because it tells you when the new pods ar
 
 ### 4. Test the endpoints
 
-These checks help confirm the app is responding correctly:
+K3s provides a built-in LoadBalancer (ServiceLB) that automatically binds the service port (8082) to your host's IP address. This means you can access the service from your local machine OR any other machine on your LAN:
 
-* `curl -v localhost:8082/`  
-  Returns the main response for the app.
+* **Local access:** `curl -v localhost:8082/`
+* **LAN access:** `curl -v http://<YOUR_HOST_IP>:8082/`
 
-* `curl -v localhost:8082/health`  
-  Checks whether the service is healthy.
-
-* `curl -v localhost:8082/ready`  
-  Checks whether the service is ready to receive traffic.
-
-* `curl -v localhost:8082/fail`  
-  Forces the service into an unhealthy state for testing.
-
-* `curl -v localhost:8082/health`  
-  Should now return `500` after calling `/fail`.
-
-### 5. Update the image after making changes
+#### Health and Readiness checks:
+* `curl -v localhost:8082/health` - Checks whether the service is healthy.
+* `curl -v localhost:8082/ready`  - Checks whether the service is ready.
+* `curl -v localhost:8082/fail`   - Forces the service into an unhealthy state.
+* `curl -v localhost:8082/health` - Should now return `500` after calling `/fail`.
 
 If you change the Go code, rebuild the image and redeploy it.
 
@@ -121,8 +114,8 @@ If you change the Go code, rebuild the image and redeploy it.
 Use this when you want to keep the same tag, such as `latest`, and refresh the running workload manually:
 
 * Rebuild the image
-* Reload it into Kind:
-    * `kind load docker-image localhost/hello-go-service:latest --name go-learning`
+* Reload it into K3s:
+    * `podman save localhost/hello-go-service:latest | sudo k3s ctr images import -`
 * Restart the deployment:
     * `kubectl rollout restart deployment hello-go-deployment`
 * Wait for the update to finish:
